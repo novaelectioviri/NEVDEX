@@ -10,6 +10,8 @@ import { Client, dexFactory, toUnits } from '@ston-fi/sdk';
 
 const DEFAULT_REMOTE_MANIFEST_URL =
   'https://novaelectioviri.github.io/NEVDEX/tonconnect-manifest.json';
+const DEFAULT_REMOTE_WALLETS_LIST_URL =
+  'https://novaelectioviri.github.io/NEVDEX/wallets-v2.json';
 
 function resolveManifestUrl() {
   if (TONCONNECT_MANIFEST_URL) {
@@ -30,6 +32,22 @@ function resolveManifestUrl() {
 }
 
 const manifestUrl = resolveManifestUrl();
+
+function resolveWalletsListSource() {
+  const protocol = window.location.protocol;
+  const isLocalhost =
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1';
+  const isUnsafeProtocol = protocol !== 'https:' && protocol !== 'chrome-extension:';
+
+  if (isLocalhost || isUnsafeProtocol) {
+    return DEFAULT_REMOTE_WALLETS_LIST_URL;
+  }
+
+  return new URL('./wallets-v2.json', window.location.href.split('#')[0]).toString();
+}
+
+const walletsListSource = resolveWalletsListSource();
 
 /** @type {any | null} */
 let tonConnectUI = null;
@@ -72,12 +90,17 @@ function toNanoSafe(value) {
 export async function getTonConnectUI() {
   if (!tonConnectUI) {
     if (!tonConnectLoadingPromise) {
-      tonConnectLoadingPromise = import('@tonconnect/ui').then(({ TonConnectUI }) => {
-        tonConnectUI = new TonConnectUI({
+      tonConnectLoadingPromise = import('@tonconnect/ui').then(({ TonConnect, TonConnectUI }) => {
+        const connector = new TonConnect({
           manifestUrl,
+          walletsListSource,
+        });
+        tonConnectUI = new TonConnectUI({
+          connector,
           // Avoid aggressive bridge reconnect loops on page load in browsers/networks
           // where wallet bridge SSE is blocked; connect explicitly on user action.
           restoreConnection: false,
+          analytics: { mode: 'off' },
           uiPreferences: {
             theme: 'SYSTEM',
           },
