@@ -214,3 +214,43 @@ button {
 .vote-progress-message.success {
   color: var(--success);
 }
+
+.status-banner {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.status-banner.info {
+  background: color-mix(in srgb, var(--button) 12%, transparent);
+  border-color: color-mix(in srgb, var(--button) 35%, var(--border));
+}
+
+.status-banner.success {
+  background: color-mix(in srgb, var(--success) 16%, transparent);
+  border-color: color-mix(in srgb, var(--success) 35%, var(--border));
+}
+
+.status-banner.error {
+  background: color-mix(in srgb, var(--error) 16%, transparent);
+  border-color: color-mix(in srgb, var(--error) 35%, var(--border));
+}
+
+.dex-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.dex-table th,
+.dex-table td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dex-table th {
+  color: var(--hint);
+  font-weight: 600;
+}

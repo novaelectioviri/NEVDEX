@@ -1,14 +1,12 @@
 import {
-  ESCROW_ADDRESS,
-  JETTON_MASTER_ADDRESS,
+  DEFAULT_SLIPPAGE,
   NETWORK,
-  LEGACY_VOTE_ENABLED,
-  NFT_COLLECTION_ADDRESS,
-  PROPOSAL_FEE,
+  TON_ASSET_ADDRESS,
+  TON_RPC_ENDPOINT,
   TONCONNECT_MANIFEST_URL,
-  VOTE_FEE,
-  VOTE_LOCK,
 } from './constants.js';
+import { StonApiClient } from '@ston-fi/api';
+import { Client, dexFactory, toUnits } from '@ston-fi/sdk';
 
 const DEFAULT_REMOTE_MANIFEST_URL =
   'https://novaelectioviri.github.io/NEVDEX/tonconnect-manifest.json';
@@ -68,13 +66,6 @@ function toNanoSafe(value) {
   return loadTonCore().then(({ toNano }) => toNano(value).toString());
 }
 
-function resolveEscrowAddress() {
-  if (!ESCROW_ADDRESS) {
-    throw new Error('VITE_VOTING_ESCROW_ADDRESS не настроен');
-  }
-  return ESCROW_ADDRESS;
-}
-
 /**
  * @returns {Promise<any>}
  */
@@ -118,14 +109,6 @@ export function onWalletChange(callback) {
 }
 
 /**
- * @param {number} value
- * @returns {bigint}
- */
-function toQueryId(value) {
-  return BigInt(Math.floor(Date.now() / 1000) + value);
-}
-
-/**
  * @param {string} value
  * @returns {Promise<import('@ton/core').Address>}
  */
@@ -139,303 +122,106 @@ async function parseAnyAddress(value) {
 }
 
 /**
- * @param {{
- * title: string;
- * description: string;
- * targetAddress: string;
- * amountTon: number;
- * nftProofCount: number;
- * jettonProofAmount: number;
- * }} data
- * @returns {Promise<string>}
+ * @returns {StonApiClient}
  */
-export async function buildCreateProposalPayload(data) {
-  const { beginCell, toNano } = await loadTonCore();
-  const payload = beginCell()
-    .storeUint(0x43525052, 32)
-    .storeUint(toQueryId(1), 64)
-    .storeAddress(await parseAnyAddress(data.targetAddress))
-    .storeCoins(toNano(Math.max(0, data.amountTon).toString()))
-    .storeBit(0)
-    .storeUint(Math.max(1, data.nftProofCount), 16)
-    .storeCoins(toNano(Math.max(0, data.jettonProofAmount).toString()))
-    .endCell();
-  return payload.toBoc().toString('base64');
+export function getStonApiClient() {
+  return new StonApiClient();
 }
 
 /**
- * @param {{ proposalId: number; support: 0 | 1; lockedNfts: number; lockedJettons: number }} data
- * @returns {Promise<string>}
+ * @returns {Client}
  */
-export async function buildVotePayload(data) {
-  const { beginCell, toNano } = await loadTonCore();
-  const payload = beginCell()
-    .storeUint(0x564f5445, 32)
-    .storeUint(toQueryId(2), 64)
-    .storeUint(data.proposalId, 32)
-    .storeUint(data.support, 1)
-    .storeUint(Math.max(0, data.lockedNfts), 16)
-    .storeCoins(toNano(Math.max(0, data.lockedJettons).toString()))
-    .endCell();
-  return payload.toBoc().toString('base64');
-}
-
-/**
- * @param {{ proposalId: number; support: 0 | 1; voter: string; lockedNfts: number }} data
- * @returns {Promise<string>}
- */
-export async function buildVoteLockNftForwardPayload(data) {
-  const { beginCell } = await loadTonCore();
-  const payload = beginCell()
-    .storeUint(0x564f5445, 32)
-    .storeUint(data.proposalId, 32)
-    .storeUint(data.support, 1)
-    .storeAddress(await parseAnyAddress(data.voter))
-    .storeUint(Math.max(1, data.lockedNfts), 16)
-    .endCell();
-  return payload.toBoc().toString('base64');
-}
-
-/**
- * @param {{ proposalId: number; support: 0 | 1; voter: string }} data
- * @returns {Promise<string>}
- */
-export async function buildVoteLockJettonForwardPayload(data) {
-  const { beginCell } = await loadTonCore();
-  const payload = beginCell()
-    .storeUint(0x564f5445, 32)
-    .storeUint(data.proposalId, 32)
-    .storeUint(data.support, 1)
-    .storeAddress(await parseAnyAddress(data.voter))
-    .endCell();
-  return payload.toBoc().toString('base64');
-}
-
-/**
- * @param {string} base64
- * @returns {Promise<import('@ton/core').Cell>}
- */
-async function parseBoc(base64) {
-  const { Cell } = await loadTonCore();
-  const cells = Cell.fromBase64(base64);
-  if (!cells) {
-    throw new Error('Invalid BOC payload');
-  }
-  return cells;
-}
-
-function parsePositiveBigInt(value, label) {
-  let parsed;
-  try {
-    parsed = BigInt(String(value));
-  } catch {
-    throw new Error(`${label} must be a valid integer`);
-  }
-  if (parsed <= 0n) {
-    throw new Error(`${label} must be positive`);
-  }
-  return parsed;
-}
-
-/**
- * @param {{ voterAddress: string; forwardPayloadBoc: string }} data
- * @returns {Promise<string>}
- */
-export async function buildNftTransferPayload(data) {
-  const { beginCell } = await loadTonCore();
-  const payload = beginCell()
-    .storeUint(0x5fcc3d14, 32)
-    .storeUint(toQueryId(12), 64)
-    .storeAddress(await parseAnyAddress(resolveEscrowAddress()))
-    .storeAddress(await parseAnyAddress(data.voterAddress))
-    .storeBit(0)
-    .storeCoins(0)
-    .storeBit(1)
-    .storeRef(await parseBoc(data.forwardPayloadBoc))
-    .endCell();
-  return payload.toBoc().toString('base64');
+function getStonTonClient() {
+  return new Client({ endpoint: TON_RPC_ENDPOINT });
 }
 
 /**
  * @param {{
- * jettonRawAmount: string;
- * voterAddress: string;
- * forwardPayloadBoc: string;
- * }} data
- * @returns {Promise<string>}
+ *   offerAddress: string;
+ *   askAddress: string;
+ *   offerUnits: string;
+ *   slippageTolerance?: string;
+ * }} params
  */
-export async function buildJettonTransferPayload(data) {
-  const { beginCell, toNano } = await loadTonCore();
-  const payload = beginCell()
-    .storeUint(0x0f8a7ea5, 32)
-    .storeUint(toQueryId(13), 64)
-    .storeCoins(parsePositiveBigInt(data.jettonRawAmount, 'Jetton amount'))
-    .storeAddress(await parseAnyAddress(resolveEscrowAddress()))
-    .storeAddress(await parseAnyAddress(data.voterAddress))
-    .storeBit(0)
-    .storeCoins(toNano('0.05'))
-    .storeBit(1)
-    .storeRef(await parseBoc(data.forwardPayloadBoc))
-    .endCell();
-  return payload.toBoc().toString('base64');
+export async function simulateSwap(params) {
+  const client = getStonApiClient();
+  return client.simulateSwap({
+    offerAddress: params.offerAddress,
+    askAddress: params.askAddress,
+    offerUnits: params.offerUnits,
+    slippageTolerance: params.slippageTolerance ?? DEFAULT_SLIPPAGE,
+    dexV2: true,
+  });
 }
 
 /**
- * @param {{ nftAddress: string; payloadBoc: string }} data
+ * @param {string} amount
+ * @param {number} decimals
+ * @returns {string}
  */
-export async function sendNftLockTx(data) {
-  if (!NFT_COLLECTION_ADDRESS) {
-    throw new Error('VITE_NFT_COLLECTION_ADDRESS не настроен');
+export function toUnitsString(amount, decimals) {
+  return toUnits(String(amount), decimals).toString();
+}
+
+/**
+ * @param {{
+ *   userWalletAddress: string;
+ *   simulationResult: any;
+ * }} params
+ */
+export async function buildSwapTxParams(params) {
+  const { simulationResult } = params;
+  const tonClient = getStonTonClient();
+  const dexContracts = dexFactory(simulationResult.router);
+  const router = tonClient.open(
+    dexContracts.Router.create(simulationResult.router.address),
+  );
+  const proxyTon = dexContracts.pTON.create(
+    simulationResult.router.ptonMasterAddress,
+  );
+  const shared = {
+    userWalletAddress: params.userWalletAddress,
+    offerAmount: simulationResult.offerUnits,
+    minAskAmount: simulationResult.minAskUnits,
+  };
+  if (simulationResult.offerAddress === TON_ASSET_ADDRESS) {
+    return router.getSwapTonToJettonTxParams({
+      ...shared,
+      proxyTon,
+      askJettonAddress: simulationResult.askAddress,
+    });
   }
-  const ui = await getTonConnectUI();
-  const amount = await toNanoSafe('0.2');
-  await ui.sendTransaction({
-    validUntil: Math.floor(Date.now() / 1000) + 360,
-    network: NETWORK === 'testnet' ? '-3' : undefined,
-    messages: [
-      {
-        address: data.nftAddress,
-        amount,
-        payload: data.payloadBoc,
-      },
-    ],
-  });
-}
-
-/**
- * @param {{ jettonWalletAddress: string; payloadBoc: string }} data
- */
-export async function sendJettonLockTx(data) {
-  if (!JETTON_MASTER_ADDRESS) {
-    throw new Error('VITE_JETTON_MASTER_ADDRESS не настроен');
+  if (simulationResult.askAddress === TON_ASSET_ADDRESS) {
+    return router.getSwapJettonToTonTxParams({
+      ...shared,
+      proxyTon,
+      offerJettonAddress: simulationResult.offerAddress,
+    });
   }
-  const ui = await getTonConnectUI();
-  const amount = await toNanoSafe('0.25');
-  await ui.sendTransaction({
-    validUntil: Math.floor(Date.now() / 1000) + 360,
-    network: NETWORK === 'testnet' ? '-3' : undefined,
-    messages: [
-      {
-        address: data.jettonWalletAddress,
-        amount,
-        payload: data.payloadBoc,
-      },
-    ],
+  return router.getSwapJettonToJettonTxParams({
+    ...shared,
+    offerJettonAddress: simulationResult.offerAddress,
+    askJettonAddress: simulationResult.askAddress,
   });
 }
 
 /**
- * @returns {boolean}
+ * @param {{
+ *   address: string;
+ *   amount: string;
+ *   payload?: string;
+ * }} message
  */
-export function isLegacyVoteEnabled() {
-  return LEGACY_VOTE_ENABLED;
-}
-
-/**
- * @param {number} proposalId
- * @returns {Promise<string>}
- */
-export async function buildExecutePayload(proposalId) {
-  const { beginCell } = await loadTonCore();
-  const payload = beginCell()
-    .storeUint(0x45584543, 32)
-    .storeUint(toQueryId(3), 64)
-    .storeUint(proposalId, 32)
-    .endCell();
-  return payload.toBoc().toString('base64');
-}
-
-/**
- * @param {{ proposalId: number; voter: string }} data
- * @returns {Promise<string>}
- */
-export async function buildClaimForPayload(data) {
-  const { beginCell } = await loadTonCore();
-  const payload = beginCell()
-    .storeUint(0x434c4d46, 32)
-    .storeUint(toQueryId(4), 64)
-    .storeUint(data.proposalId, 32)
-    .storeAddress(await parseAnyAddress(data.voter))
-    .endCell();
-  return payload.toBoc().toString('base64');
-}
-
-/**
- * @param {{ payloadBoc?: string }} [options]
- */
-export async function sendCreateProposalTx(options = {}) {
-  const escrowAddress = resolveEscrowAddress();
+export async function sendSwapTransaction(message) {
   const ui = await getTonConnectUI();
-  const tonAmount = Math.max(0, Number(options.tonAmount ?? 0));
-  const amount = await toNanoSafe((PROPOSAL_FEE + tonAmount).toString());
   await ui.sendTransaction({
-    validUntil: Math.floor(Date.now() / 1000) + 360,
+    validUntil: Date.now() + 5 * 60 * 1000,
     network: NETWORK === 'testnet' ? '-3' : undefined,
     messages: [
       {
-        address: escrowAddress,
-        amount,
-        payload: options.payloadBoc,
-      },
-    ],
-  });
-}
-
-/**
- * @param {{ payloadBoc?: string }} [options]
- */
-export async function sendVoteTx(options = {}) {
-  const escrowAddress = resolveEscrowAddress();
-  const ui = await getTonConnectUI();
-  const amount = await toNanoSafe((VOTE_FEE + VOTE_LOCK).toString());
-  await ui.sendTransaction({
-    validUntil: Math.floor(Date.now() / 1000) + 360,
-    network: NETWORK === 'testnet' ? '-3' : undefined,
-    messages: [
-      {
-        address: escrowAddress,
-        amount,
-        payload: options.payloadBoc,
-      },
-    ],
-  });
-}
-
-/**
- * @param {{ payloadBoc?: string }} [options]
- */
-export async function sendExecuteTx(options = {}) {
-  const escrowAddress = resolveEscrowAddress();
-  const ui = await getTonConnectUI();
-  const amount = await toNanoSafe('0.3');
-  await ui.sendTransaction({
-    validUntil: Math.floor(Date.now() / 1000) + 360,
-    network: NETWORK === 'testnet' ? '-3' : undefined,
-    messages: [
-      {
-        address: escrowAddress,
-        amount,
-        payload: options.payloadBoc,
-      },
-    ],
-  });
-}
-
-/**
- * @param {string} claimPayloadBoc
- */
-export async function sendClaimTx(claimPayloadBoc) {
-  const escrowAddress = resolveEscrowAddress();
-  const ui = await getTonConnectUI();
-  const amount = await toNanoSafe('0.2');
-  await ui.sendTransaction({
-    validUntil: Math.floor(Date.now() / 1000) + 360,
-    network: NETWORK === 'testnet' ? '-3' : undefined,
-    messages: [
-      {
-        address: escrowAddress,
-        amount,
-        payload: claimPayloadBoc,
+        address: message.address,
+        amount: message.amount,
+        payload: message.payload,
       },
     ],
   });

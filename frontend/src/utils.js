@@ -1,93 +1,84 @@
-import { CONSENSUS_PERCENT, MIN_QUORUM } from './constants.js';
-
-/**
- * @param {number} seconds
- * @returns {string}
- */
-export function formatDuration(seconds) {
-  if (seconds <= 0) {
-    return '0ч 0м';
-  }
-
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  return `${hours}ч ${minutes}м`;
-}
-
-/**
- * @param {number} timestamp
- * @returns {number}
- */
-export function secondsUntil(timestamp) {
-  return Math.max(0, timestamp - Math.floor(Date.now() / 1000));
-}
-
 /**
  * @param {string} address
  * @returns {boolean}
  */
 export function validateTonAddress(address) {
-  const trimmed = address.trim();
+  const trimmed = String(address ?? '').trim();
   return /^(EQ|UQ)[A-Za-z0-9_-]{46}$/.test(trimmed);
 }
 
 /**
- * @param {number} yes
- * @param {number} no
- * @returns {number}
- */
-export function yesPercent(yes, no) {
-  const total = yes + no;
-  if (total <= 0) {
-    return 0;
-  }
-  return Math.round((yes / total) * 100);
-}
-
-/**
- * @param {{ yesVotes: number, noVotes: number, voters: number, endAt: number, executed: boolean, claimedAll: boolean }} proposal
- * @returns {"Active" | "Consensus" | "Executed" | "Expired" | "Claimable"}
- */
-export function deriveStatus(proposal) {
-  if (proposal.executed) {
-    return 'Executed';
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  const total = proposal.yesVotes + proposal.noVotes;
-  const consensusReached =
-    total > 0 &&
-    proposal.voters >= MIN_QUORUM &&
-    (proposal.yesVotes / total) * 100 >= CONSENSUS_PERCENT;
-
-  if (now < proposal.endAt) {
-    return consensusReached ? 'Consensus' : 'Active';
-  }
-
-  if (!proposal.claimedAll) {
-    return 'Claimable';
-  }
-
-  return consensusReached ? 'Consensus' : 'Expired';
-}
-
-/**
- * @param {number} n
+ * @param {number | string | undefined | null} value
+ * @param {number} [digits]
  * @returns {string}
  */
-export function formatTon(n) {
-  return `${n.toFixed(2)} TON`;
+export function formatUsd(value, digits = 4) {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n)) {
+    return '$0.00';
+  }
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: digits,
+  }).format(n);
 }
 
 /**
- * @param {number} timestamp
+ * @param {number | string | undefined | null} value
+ * @param {number} [digits]
  * @returns {string}
  */
-export function formatDateTime(timestamp) {
-  return new Date(timestamp * 1000).toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+export function formatTokenAmount(value, digits = 6) {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n)) {
+    return '0';
+  }
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: digits,
+  }).format(n);
+}
+
+/**
+ * @param {string | undefined | null} address
+ * @returns {string}
+ */
+export function shortAddress(address) {
+  if (!address) {
+    return '—';
+  }
+  const trimmed = String(address);
+  if (trimmed.length <= 12) {
+    return trimmed;
+  }
+  return `${trimmed.slice(0, 6)}...${trimmed.slice(-6)}`;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
+export function explainError(value) {
+  if (value instanceof Error) {
+    return value.message;
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  return 'Unexpected error';
+}
+
+/**
+ * @param {string} value
+ * @returns {string}
+ */
+export function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }

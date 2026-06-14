@@ -1,37 +1,28 @@
-export const NETWORK = 'testnet';
+export const APP_NAME = 'NEVDEX';
 
-export const ROUTES = {
-  dashboard: '/',
-  create: '/create',
-  votes: '/votes',
-  claim: '/claim',
-};
+export const NETWORK = import.meta.env.VITE_NETWORK ?? 'mainnet';
+export const TON_RPC_ENDPOINT =
+  import.meta.env.VITE_TON_RPC_ENDPOINT ??
+  'https://toncenter.com/api/v2/jsonRPC';
 
-export const VOTE_FEE = 0.5;
-export const VOTE_LOCK = 0.15;
-export const PROPOSAL_FEE = 2.0;
-export const PROPOSAL_REFUND = 1.0;
-export const VOTING_DURATION_SECONDS = 75600;
-export const COOL_DOWN_SECONDS = 75600;
-export const CONSENSUS_PERCENT = 75;
-export const MIN_QUORUM = 3;
-export const MAX_CLAIM_BONUS = 0.3;
-export const GAS_RESERVE = 0.15;
+export const TON_ASSET_ADDRESS =
+  import.meta.env.VITE_TON_ASSET_ADDRESS ??
+  'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c';
 
-export const STORAGE_KEY = 'web3app.voting.state.v2';
+export const DEFAULT_SWAP_TOKEN_ADDRESS =
+  import.meta.env.VITE_DEFAULT_SWAP_TOKEN_ADDRESS ??
+  'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs';
 
-export const ESCROW_ADDRESS =
-  import.meta.env.VITE_VOTING_ESCROW_ADDRESS ?? '';
-export const NFT_COLLECTION_ADDRESS =
-  import.meta.env.VITE_NFT_COLLECTION_ADDRESS ?? '';
-export const JETTON_MASTER_ADDRESS =
-  import.meta.env.VITE_JETTON_MASTER_ADDRESS ?? '';
-export const TONAPI_BASE_URL =
-  import.meta.env.VITE_TONAPI_BASE_URL ?? 'https://tonapi.io/v2';
+export const DEFAULT_SLIPPAGE =
+  import.meta.env.VITE_DEFAULT_SLIPPAGE ?? '0.01';
+
+export const ASSET_QUERY_LIMIT = Number(
+  import.meta.env.VITE_ASSET_QUERY_LIMIT ?? 80,
+);
+
+export const POOL_QUERY_LIMIT = Number(
+  import.meta.env.VITE_POOL_QUERY_LIMIT ?? 20,
+);
 
 export const TONCONNECT_MANIFEST_URL =
   import.meta.env.VITE_TONCONNECT_MANIFEST_URL ?? '';
-
-export const LEGACY_VOTE_ENABLED =
-  String(import.meta.env.VITE_LEGACY_VOTE_ENABLED ?? '').toLowerCase() ===
-  'true';

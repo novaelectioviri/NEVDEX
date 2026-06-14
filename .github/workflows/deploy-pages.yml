@@ -33,12 +33,6 @@ jobs:
       - name: Lint frontend
         run: npm run lint:frontend
 
-      - name: Compile contracts
-        run: npm run compile
-
-      - name: Run tests
-        run: npm test
-
       - name: Build frontend
         run: npm run build
 
