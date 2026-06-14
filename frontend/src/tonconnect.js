@@ -12,7 +12,7 @@ const DEFAULT_REMOTE_MANIFEST_URL =
   'https://novaelectioviri.github.io/NEVDEX/tonconnect-manifest.json';
 const DEFAULT_REMOTE_WALLETS_LIST_URL =
   'https://novaelectioviri.github.io/NEVDEX/wallets-v2.json';
-const TONCONNECT_STORAGE_MIGRATION_KEY = 'nevdex-tonconnect-storage-v1-cleared';
+const TONCONNECT_STORAGE_MIGRATION_KEY = 'nevdex-tonconnect-storage-v2-cleared';
 
 function resolveManifestUrl() {
   if (TONCONNECT_MANIFEST_URL) {
