@@ -12,6 +12,7 @@ const DEFAULT_REMOTE_MANIFEST_URL =
   'https://novaelectioviri.github.io/NEVDEX/tonconnect-manifest.json';
 const DEFAULT_REMOTE_WALLETS_LIST_URL =
   'https://novaelectioviri.github.io/NEVDEX/wallets-v2.json';
+const TONCONNECT_STORAGE_MIGRATION_KEY = 'nevdex-tonconnect-storage-v1-cleared';
 
 function resolveManifestUrl() {
   if (TONCONNECT_MANIFEST_URL) {
@@ -48,6 +49,38 @@ function resolveWalletsListSource() {
 }
 
 const walletsListSource = resolveWalletsListSource();
+
+function clearLegacyTonConnectStorageOnce() {
+  try {
+    if (localStorage.getItem(TONCONNECT_STORAGE_MIGRATION_KEY) === '1') {
+      return;
+    }
+
+    const exactKeys = [
+      'ton-connect-storage_bridge-connection',
+      'ton-connect-ui_wallet-info',
+      'ton-connect-ui_last-selected-wallet-info',
+      'ton-connect-ui_preferred-wallet',
+    ];
+    for (const key of exactKeys) {
+      localStorage.removeItem(key);
+    }
+
+    for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+      const key = localStorage.key(i);
+      if (!key) {
+        continue;
+      }
+      if (key.startsWith('ton-connect-storage_http-bridge-gateway::')) {
+        localStorage.removeItem(key);
+      }
+    }
+
+    localStorage.setItem(TONCONNECT_STORAGE_MIGRATION_KEY, '1');
+  } catch {
+    // Ignore localStorage access errors in hardened browsers.
+  }
+}
 
 /** @type {any | null} */
 let tonConnectUI = null;
@@ -89,11 +122,13 @@ function toNanoSafe(value) {
  */
 export async function getTonConnectUI() {
   if (!tonConnectUI) {
+    clearLegacyTonConnectStorageOnce();
     if (!tonConnectLoadingPromise) {
       tonConnectLoadingPromise = import('@tonconnect/ui').then(({ TonConnect, TonConnectUI }) => {
         const connector = new TonConnect({
           manifestUrl,
           walletsListSource,
+          analytics: { mode: 'off' },
         });
         tonConnectUI = new TonConnectUI({
           connector,
