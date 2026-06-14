@@ -37,10 +37,14 @@ jobs:
         run: npm run build
 
       - name: Ensure Pages is enabled (optional)
-        if: ${{ secrets.PAGES_TOKEN != '' }}
         env:
           PAGES_TOKEN: ${{ secrets.PAGES_TOKEN }}
         run: |
+          if [ -z "${PAGES_TOKEN}" ]; then
+            echo "PAGES_TOKEN is not set. Skipping auto-enable."
+            exit 0
+          fi
+
           curl -L -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${PAGES_TOKEN}" \
