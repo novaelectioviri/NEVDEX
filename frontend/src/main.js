@@ -1,3 +1,4 @@
+import './polyfills.js';
 import './index.css';
 import { fromUnits } from '@ston-fi/sdk';
 import {
