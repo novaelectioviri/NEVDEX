@@ -87,7 +87,6 @@ async function bootstrap() {
     refreshAssets(),
     refreshTopPools(),
     refreshPairPoolsBySelection(),
-    ensureTonConnectReady(false),
   ]);
   setNotice(
     'success',

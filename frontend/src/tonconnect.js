@@ -75,6 +75,9 @@ export async function getTonConnectUI() {
       tonConnectLoadingPromise = import('@tonconnect/ui').then(({ TonConnectUI }) => {
         tonConnectUI = new TonConnectUI({
           manifestUrl,
+          // Avoid aggressive bridge reconnect loops on page load in browsers/networks
+          // where wallet bridge SSE is blocked; connect explicitly on user action.
+          restoreConnection: false,
           uiPreferences: {
             theme: 'SYSTEM',
           },
