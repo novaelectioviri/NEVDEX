@@ -17,11 +17,12 @@ export function formatUsd(value, digits = 4) {
   if (!Number.isFinite(n)) {
     return '$0.00';
   }
+  const safeMaxDigits = Math.max(2, Number.isFinite(digits) ? Math.floor(digits) : 4);
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
-    maximumFractionDigits: digits,
+    maximumFractionDigits: safeMaxDigits,
   }).format(n);
 }
 
@@ -35,9 +36,10 @@ export function formatTokenAmount(value, digits = 6) {
   if (!Number.isFinite(n)) {
     return '0';
   }
+  const safeMaxDigits = Math.max(0, Number.isFinite(digits) ? Math.floor(digits) : 6);
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: digits,
+    maximumFractionDigits: safeMaxDigits,
   }).format(n);
 }
 
