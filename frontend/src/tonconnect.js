@@ -11,7 +11,7 @@ import {
 } from './constants.js';
 
 const DEFAULT_REMOTE_MANIFEST_URL =
-  'https://novaelectioviri.github.io/Web3App/tonconnect-manifest.json';
+  'https://novaelectioviri.github.io/NEVDEX/tonconnect-manifest.json';
 
 function resolveManifestUrl() {
   if (TONCONNECT_MANIFEST_URL) {

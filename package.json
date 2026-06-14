@@ -2,7 +2,7 @@
   "name": "web3app",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://novaelectioviri.github.io/Web3App/",
+  "homepage": "https://novaelectioviri.github.io/NEVDEX/",
   "description": "TON voting dApp — NFT-gated proposals with jetton escrow",
   "workspaces": [
     "frontend"
