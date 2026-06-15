@@ -11,13 +11,11 @@ import { Client, dexFactory, toUnits } from '@ston-fi/sdk';
 
 const DEFAULT_REMOTE_MANIFEST_URL =
   'https://novaelectioviri.github.io/NEVDEX/tonconnect-manifest.json';
-const DEFAULT_LOCAL_MANIFEST_URL = `${window.location.origin}${window.location.pathname.replace(
-  /\/[^/]*$/,
-  '/',
-)}tonconnect-manifest.json`;
+const PAGE_BASE_URL = new URL('./', window.location.href);
+const DEFAULT_LOCAL_MANIFEST_URL = new URL('tonconnect-manifest.json', PAGE_BASE_URL).toString();
 const DEFAULT_WALLETS_LIST_URL = new URL(
-  './wallets-v2.json',
-  window.location.href.split('#')[0],
+  'wallets-v2.json',
+  PAGE_BASE_URL,
 ).toString();
 const TONCONNECT_STORAGE_MIGRATION_KEY = 'nevdex-tonconnect-storage-v2-cleared';
 

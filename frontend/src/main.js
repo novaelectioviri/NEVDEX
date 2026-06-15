@@ -480,13 +480,6 @@ function render() {
   const fromAsset = getFromAsset();
   const toAsset = getToAsset();
 
-  if (tonConnectUI && tonConnectReady) {
-    tonConnectUI.uiOptions = {
-      buttonRootId: 'ton-connect-button',
-      uiPreferences: { theme: 'SYSTEM' },
-    };
-  }
-
   app.innerHTML = `
     <div class="app-shell safe-top safe-bottom min-h-screen">
       <main class="max-w-md mx-auto w-full px-4 py-2 space-y-4">
@@ -592,10 +585,8 @@ function renderNotice() {
 }
 
 function renderConnectControl() {
-  if (tonConnectReady) {
-    return '<div id="ton-connect-button"></div>';
-  }
-  return '<button class="btn-secondary" data-action="connect-wallet">Connect</button>';
+  const label = walletAddress ? 'Wallet Connected' : 'Connect';
+  return `<button class="btn-secondary" data-action="connect-wallet">${label}</button>`;
 }
 
 function renderSwapPanel(fromAsset, toAsset) {
@@ -886,9 +877,14 @@ function bindActions() {
   }
 
   document.querySelector('[data-action="connect-wallet"]')?.addEventListener('click', () => {
-    void ensureTonConnectReady(true).then(() => {
-      render();
-    });
+    void ensureTonConnectReady(true)
+      .then(() => {
+        render();
+      })
+      .catch((error) => {
+        setNotice('error', `Wallet connection failed: ${explainError(error)}`);
+        render();
+      });
   });
   document.querySelector('[data-action="refresh-market"]')?.addEventListener('click', () => {
     void refreshMarketData();
