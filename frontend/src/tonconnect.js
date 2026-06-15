@@ -17,7 +17,6 @@ const DEFAULT_WALLETS_LIST_URL = new URL(
   'wallets-v2.json',
   PAGE_BASE_URL,
 ).toString();
-const TONCONNECT_STORAGE_MIGRATION_KEY = 'nevdex-tonconnect-storage-v4-cleared';
 
 function resolveManifestUrl() {
   const explicitManifestUrl = sanitizeOptionalUrl(TONCONNECT_MANIFEST_URL);
@@ -120,20 +119,8 @@ function patchImagePreload() {
 
 function clearLegacyTonConnectStorageOnce() {
   try {
-    if (localStorage.getItem(TONCONNECT_STORAGE_MIGRATION_KEY) === '1') {
-      return;
-    }
-
-    const exactKeys = [
-      'ton-connect-storage_bridge-connection',
-      'ton-connect-ui_wallet-info',
-      'ton-connect-ui_last-selected-wallet-info',
-      'ton-connect-ui_preferred-wallet',
-    ];
-    for (const key of exactKeys) {
-      localStorage.removeItem(key);
-    }
-
+    // Keep startup deterministic on static hosting (GitHub Pages):
+    // stale bridge/session cache can trigger parallel polling and noisy CORS failures.
     for (let i = localStorage.length - 1; i >= 0; i -= 1) {
       const key = localStorage.key(i);
       if (!key) {
@@ -146,8 +133,6 @@ function clearLegacyTonConnectStorageOnce() {
         localStorage.removeItem(key);
       }
     }
-
-    localStorage.setItem(TONCONNECT_STORAGE_MIGRATION_KEY, '1');
   } catch {
     // Ignore localStorage access errors in hardened browsers.
   }
