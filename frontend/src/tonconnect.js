@@ -1,188 +1,66 @@
+import { StonApiClient } from '@ston-fi/api';
+import { Client, dexFactory, toUnits } from '@ston-fi/sdk';
 import {
+  DEFAULT_REMOTE_MANIFEST_URL,
   DEFAULT_SLIPPAGE,
   NETWORK,
-  sanitizeOptionalUrl,
   TON_ASSET_ADDRESS,
   TON_RPC_ENDPOINT,
   TONCONNECT_MANIFEST_URL,
+  toSafeHttpUrl,
 } from './constants.js';
-import { StonApiClient } from '@ston-fi/api';
-import { Client, dexFactory, toUnits } from '@ston-fi/sdk';
 
-const DEFAULT_REMOTE_MANIFEST_URL =
-  'https://novaelectioviri.github.io/NEVDEX/tonconnect-manifest.json';
 const PAGE_BASE_URL = new URL('./', window.location.href);
 const DEFAULT_LOCAL_MANIFEST_URL = new URL('tonconnect-manifest.json', PAGE_BASE_URL).toString();
-const DEFAULT_WALLETS_LIST_URL = new URL(
-  'wallets-v2.json',
-  PAGE_BASE_URL,
-).toString();
-
-function resolveManifestUrl() {
-  const explicitManifestUrl = sanitizeOptionalUrl(TONCONNECT_MANIFEST_URL);
-  if (explicitManifestUrl) {
-    return explicitManifestUrl;
-  }
-
-  const protocol = window.location.protocol;
-  const isLocalhost =
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1';
-  const isUnsafeProtocol = protocol !== 'https:' && protocol !== 'chrome-extension:';
-
-  if (isLocalhost || isUnsafeProtocol) {
-    return DEFAULT_REMOTE_MANIFEST_URL;
-  }
-
-  return DEFAULT_LOCAL_MANIFEST_URL;
-}
-
-const manifestUrl = resolveManifestUrl();
-
-const customWalletsListSource = sanitizeOptionalUrl(
-  import.meta.env.VITE_TONCONNECT_WALLETS_LIST_URL ?? '',
-);
-const walletsListSource = customWalletsListSource || DEFAULT_WALLETS_LIST_URL;
-const DISABLE_WALLET_PRELOAD =
-  String(import.meta.env.VITE_DISABLE_TONCONNECT_IMAGE_PRELOAD ?? '1') !== '0';
-
-function sanitizeWalletEntries(wallets) {
-  if (!Array.isArray(wallets)) {
-    return [];
-  }
-  return wallets
-    .map((wallet) => {
-      if (!wallet || typeof wallet !== 'object') {
-        return null;
-      }
-      const imageUrlRaw = typeof wallet.imageUrl === 'string' ? wallet.imageUrl.trim() : '';
-      if (!imageUrlRaw || imageUrlRaw === 'undefined') {
-        return null;
-      }
-      const sanitized = { ...wallet, imageUrl: imageUrlRaw };
-      if (sanitized.aboutUrl === 'undefined') {
-        delete sanitized.aboutUrl;
-      }
-      if (sanitized.universalLink === 'undefined') {
-        delete sanitized.universalLink;
-      }
-      if (sanitized.deepLink === 'undefined') {
-        delete sanitized.deepLink;
-      }
-      if (sanitized.bridgeUrl === 'undefined') {
-        delete sanitized.bridgeUrl;
-      }
-      return sanitized;
-    })
-    .filter(Boolean);
-}
-
-function patchWalletListResolver(TonConnectUI) {
-  if (TonConnectUI.__nevdexWalletSanitizerPatched) {
-    return;
-  }
-
-  const originalGetWallets = TonConnectUI.prototype.getWallets;
-  TonConnectUI.prototype.getWallets = async function getWalletsPatched(...args) {
-    const wallets = await originalGetWallets.apply(this, args);
-    return sanitizeWalletEntries(wallets);
-  };
-
-  TonConnectUI.__nevdexWalletSanitizerPatched = true;
-}
-
-function patchImagePreload() {
-  if (!DISABLE_WALLET_PRELOAD) {
-    return;
-  }
-  if (window.__nevdexImagePreloadPatched) {
-    return;
-  }
-  const NativeImage = window.Image;
-  if (typeof NativeImage !== 'function') {
-    return;
-  }
-
-  class SafeImage extends NativeImage {
-    set src(value) {
-      const normalized = String(value ?? '').trim();
-      if (!normalized || normalized === 'undefined') {
-        return;
-      }
-      super.src = normalized;
-    }
-  }
-
-  window.Image = SafeImage;
-  window.__nevdexImagePreloadPatched = true;
-}
-
-function clearLegacyTonConnectStorageOnce() {
-  try {
-    // Keep startup deterministic on static hosting (GitHub Pages):
-    // stale bridge/session cache can trigger parallel polling and noisy CORS failures.
-    for (let i = localStorage.length - 1; i >= 0; i -= 1) {
-      const key = localStorage.key(i);
-      if (!key) {
-        continue;
-      }
-      if (
-        key.startsWith('ton-connect-storage_') ||
-        key.startsWith('ton-connect-ui_')
-      ) {
-        localStorage.removeItem(key);
-      }
-    }
-  } catch {
-    // Ignore localStorage access errors in hardened browsers.
-  }
-}
 
 /** @type {any | null} */
 let tonConnectUI = null;
-
 /** @type {Promise<any> | null} */
 let tonConnectLoadingPromise = null;
+
+function resolveManifestUrl() {
+  const explicitUrl = toSafeHttpUrl(TONCONNECT_MANIFEST_URL);
+  if (explicitUrl) {
+    return explicitUrl;
+  }
+
+  const isLocalhost =
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const isHttpsLike =
+    window.location.protocol === 'https:' || window.location.protocol === 'chrome-extension:';
+  return isLocalhost || !isHttpsLike ? DEFAULT_REMOTE_MANIFEST_URL : DEFAULT_LOCAL_MANIFEST_URL;
+}
 
 /**
  * @returns {Promise<any>}
  */
 export async function getTonConnectUI() {
-  if (!tonConnectUI) {
-    clearLegacyTonConnectStorageOnce();
-    patchImagePreload();
-    if (!tonConnectLoadingPromise) {
-      tonConnectLoadingPromise = import('@tonconnect/ui').then(({ TonConnect, TonConnectUI }) => {
-        patchWalletListResolver(TonConnectUI);
-        const connector = new TonConnect({
-          manifestUrl,
-          walletsListSource,
-          analytics: { mode: 'off' },
-        });
-        tonConnectUI = new TonConnectUI({
-          connector,
-          // Avoid aggressive bridge reconnect loops on page load in browsers/networks
-          // where wallet bridge SSE is blocked; connect explicitly on user action.
-          restoreConnection: false,
-          analytics: { mode: 'off' },
-          uiPreferences: {
-            theme: 'SYSTEM',
-          },
-        });
-        return tonConnectUI;
-      });
-    }
-    await tonConnectLoadingPromise;
+  if (tonConnectUI) {
+    return tonConnectUI;
   }
-  return tonConnectUI;
+  if (!tonConnectLoadingPromise) {
+    tonConnectLoadingPromise = import('@tonconnect/ui').then(({ TonConnect, TonConnectUI }) => {
+      const connector = new TonConnect({
+        manifestUrl: resolveManifestUrl(),
+        analytics: { mode: 'off' },
+      });
+      tonConnectUI = new TonConnectUI({
+        connector,
+        restoreConnection: true,
+        analytics: { mode: 'off' },
+        uiPreferences: { theme: 'SYSTEM' },
+      });
+      return tonConnectUI;
+    });
+  }
+  return tonConnectLoadingPromise;
 }
 
 /**
  * @returns {string}
  */
 export function connectedAddress() {
-  const wallet = tonConnectUI?.wallet;
-  return wallet?.account?.address ?? '';
+  return tonConnectUI?.wallet?.account?.address ?? '';
 }
 
 /**
@@ -192,8 +70,7 @@ export function onWalletChange(callback) {
   if (!tonConnectUI) {
     return;
   }
-  const ui = tonConnectUI;
-  ui.onStatusChange((wallet) => {
+  tonConnectUI.onStatusChange((wallet) => {
     callback(wallet?.account?.address ?? '');
   });
 }
@@ -250,33 +127,30 @@ export async function buildSwapTxParams(params) {
   const { simulationResult } = params;
   const tonClient = getStonTonClient();
   const dexContracts = dexFactory(simulationResult.router);
-  const router = tonClient.open(
-    dexContracts.Router.create(simulationResult.router.address),
-  );
-  const proxyTon = dexContracts.pTON.create(
-    simulationResult.router.ptonMasterAddress,
-  );
-  const shared = {
+  const router = tonClient.open(dexContracts.Router.create(simulationResult.router.address));
+  const proxyTon = dexContracts.pTON.create(simulationResult.router.ptonMasterAddress);
+  const common = {
     userWalletAddress: params.userWalletAddress,
     offerAmount: simulationResult.offerUnits,
     minAskAmount: simulationResult.minAskUnits,
   };
+
   if (simulationResult.offerAddress === TON_ASSET_ADDRESS) {
     return router.getSwapTonToJettonTxParams({
-      ...shared,
+      ...common,
       proxyTon,
       askJettonAddress: simulationResult.askAddress,
     });
   }
   if (simulationResult.askAddress === TON_ASSET_ADDRESS) {
     return router.getSwapJettonToTonTxParams({
-      ...shared,
+      ...common,
       proxyTon,
       offerJettonAddress: simulationResult.offerAddress,
     });
   }
   return router.getSwapJettonToJettonTxParams({
-    ...shared,
+    ...common,
     offerJettonAddress: simulationResult.offerAddress,
     askJettonAddress: simulationResult.askAddress,
   });
@@ -291,7 +165,7 @@ export async function buildSwapTxParams(params) {
  */
 export async function sendSwapTransaction(message) {
   const ui = await getTonConnectUI();
-  const validUntil = Math.floor(Date.now() / 1000) + 5 * 60;
+  const validUntil = Math.floor(Date.now() / 1000) + 300;
   await ui.sendTransaction({
     validUntil,
     network: NETWORK === 'testnet' ? '-3' : '-239',
