@@ -45,6 +45,51 @@ const customWalletsListSource = sanitizeOptionalUrl(
 );
 const walletsListSource = customWalletsListSource || DEFAULT_WALLETS_LIST_URL;
 
+function sanitizeWalletEntries(wallets) {
+  if (!Array.isArray(wallets)) {
+    return [];
+  }
+  return wallets
+    .map((wallet) => {
+      if (!wallet || typeof wallet !== 'object') {
+        return null;
+      }
+      const imageUrlRaw = typeof wallet.imageUrl === 'string' ? wallet.imageUrl.trim() : '';
+      if (!imageUrlRaw || imageUrlRaw === 'undefined') {
+        return null;
+      }
+      const sanitized = { ...wallet, imageUrl: imageUrlRaw };
+      if (sanitized.aboutUrl === 'undefined') {
+        delete sanitized.aboutUrl;
+      }
+      if (sanitized.universalLink === 'undefined') {
+        delete sanitized.universalLink;
+      }
+      if (sanitized.deepLink === 'undefined') {
+        delete sanitized.deepLink;
+      }
+      if (sanitized.bridgeUrl === 'undefined') {
+        delete sanitized.bridgeUrl;
+      }
+      return sanitized;
+    })
+    .filter(Boolean);
+}
+
+function patchWalletListResolver(TonConnectUI) {
+  if (TonConnectUI.__nevdexWalletSanitizerPatched) {
+    return;
+  }
+
+  const originalGetWallets = TonConnectUI.prototype.getWallets;
+  TonConnectUI.prototype.getWallets = async function getWalletsPatched(...args) {
+    const wallets = await originalGetWallets.apply(this, args);
+    return sanitizeWalletEntries(wallets);
+  };
+
+  TonConnectUI.__nevdexWalletSanitizerPatched = true;
+}
+
 function clearLegacyTonConnectStorageOnce() {
   try {
     if (localStorage.getItem(TONCONNECT_STORAGE_MIGRATION_KEY) === '1') {
@@ -94,6 +139,7 @@ export async function getTonConnectUI() {
     clearLegacyTonConnectStorageOnce();
     if (!tonConnectLoadingPromise) {
       tonConnectLoadingPromise = import('@tonconnect/ui').then(({ TonConnect, TonConnectUI }) => {
+        patchWalletListResolver(TonConnectUI);
         const connector = new TonConnect({
           manifestUrl,
           walletsListSource,
