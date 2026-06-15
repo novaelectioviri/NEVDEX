@@ -26,3 +26,24 @@ export const POOL_QUERY_LIMIT = Number(
 
 export const TONCONNECT_MANIFEST_URL =
   import.meta.env.VITE_TONCONNECT_MANIFEST_URL ?? '';
+
+export function sanitizeOptionalUrl(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) {
+    return '';
+  }
+  const lowered = raw.toLowerCase();
+  if (lowered === 'undefined' || lowered === 'null') {
+    return '';
+  }
+  try {
+    // Keep only absolute http(s) URLs to avoid accidental relative "undefined".
+    const parsed = new URL(raw);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.toString();
+    }
+  } catch {
+    return '';
+  }
+  return '';
+}

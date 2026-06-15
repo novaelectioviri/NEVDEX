@@ -90,7 +90,7 @@ async function bootstrap() {
   ]);
   setNotice(
     'success',
-    'DEX ready. Select pair, get quote, then execute swap via TonConnect.',
+    'DAO desk ready. Review quote impact first, then execute with wallet approval.',
   );
   render();
 }
@@ -366,7 +366,7 @@ async function handleQuote() {
       slippageTolerance: slippageTolerance || DEFAULT_SLIPPAGE,
     });
     quoteInputKey = currentInputKey();
-    setNotice('success', 'Quote updated. You can execute the swap.');
+    setNotice('success', 'Quote updated. Check route and impact before execution.');
     await refreshPairPoolsBySelection();
   } catch (error) {
     quote = null;
@@ -404,7 +404,7 @@ async function handleSwap() {
     }
 
     swapInProgress = true;
-    setNotice('info', 'Building on-chain swap transaction...');
+    setNotice('info', 'Preparing accountable on-chain execution...');
     render();
 
     const txParams = await buildSwapTxParams({
@@ -419,7 +419,7 @@ async function handleSwap() {
 
     setNotice(
       'success',
-      'Transaction sent to wallet. Confirm and wait for blockchain finality.',
+      'Swap request sent to wallet. Confirm to finalize on-chain.',
     );
   } catch (error) {
     setNotice('error', `Swap failed: ${explainError(error)}`);
@@ -471,9 +471,10 @@ function render() {
   const toAsset = getToAsset();
 
   app.innerHTML = `
-    <div class="safe-top safe-bottom min-h-screen">
+    <div class="app-shell safe-top safe-bottom min-h-screen">
       <main class="max-w-md mx-auto w-full px-4 py-2 space-y-4">
         ${renderHeader()}
+        ${renderMissionPanel()}
         ${renderNotice()}
         ${renderSwapPanel(fromAsset, toAsset)}
         ${renderQuotePanel()}
@@ -497,26 +498,75 @@ function render() {
 }
 
 function renderHeader() {
+  const observedLiquidity = topPools.reduce(
+    (sum, pool) => sum + Number(pool.lpTotalSupplyUsd ?? 0),
+    0,
+  );
+  const observedVolume24h = topPools.reduce(
+    (sum, pool) => sum + Number(pool.volume24HUsd ?? 0),
+    0,
+  );
+
   return `
-    <section class="card space-y-3">
+    <section class="card hero-card space-y-4">
       <div class="flex items-start justify-between gap-3">
-        <div>
+        <div class="space-y-2">
+          <p class="hero-kicker">DAO Exchange Mission</p>
           <h1 class="text-2xl font-bold">${APP_NAME}</h1>
-          <p class="text-xs" style="color: var(--hint)">
-            TON DEX interface on open STON.fi market data.
+          <p class="text-sm hero-subtitle">
+            Public responsibility first: transparent liquidity, visible execution route, and
+            wallet-owned consent.
           </p>
         </div>
         ${renderConnectControl()}
       </div>
-      <div class="flex items-center justify-between gap-3">
-        <span class="mono text-sm">
-          ${walletAddress ? shortAddress(walletAddress) : 'Wallet not connected'}
-        </span>
-        <button class="btn-secondary" data-action="refresh-market">Refresh</button>
+
+      <div class="hero-pill-row">
+        <span class="value-pill">Transparency by default</span>
+        <span class="value-pill">Community accountability</span>
+        <span class="value-pill">Self-custody execution</span>
       </div>
-      <p class="text-xs" style="color: var(--hint)">
-        Network: ${NETWORK} • Data: api.ston.fi • Swap execution: STON SDK + TonConnect
+
+      <div class="hero-metrics">
+        <div>
+          <p class="metric-label">Observed liquidity</p>
+          <p class="metric-value">${formatUsd(observedLiquidity, 0)}</p>
+        </div>
+        <div>
+          <p class="metric-label">Observed 24h volume</p>
+          <p class="metric-value">${formatUsd(observedVolume24h, 0)}</p>
+        </div>
+        <div>
+          <p class="metric-label">Wallet status</p>
+          <p class="metric-value mono">
+            ${walletAddress ? shortAddress(walletAddress) : 'Not connected'}
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3">
+        <button class="btn-secondary" data-action="refresh-market">Refresh market</button>
+      </div>
+
+      <p class="text-xs hero-footnote">
+        Network: ${NETWORK} • Data source: api.ston.fi • Execution: STON SDK + TonConnect
       </p>
+    </section>
+  `;
+}
+
+function renderMissionPanel() {
+  return `
+    <section class="card mission-card space-y-3">
+      <div class="flex items-center justify-between gap-2">
+        <h2 class="text-sm font-semibold uppercase tracking-wide">Public Responsibility Charter</h2>
+        <span class="pill consensus">DAO ethics</span>
+      </div>
+      <div class="mission-grid">
+        <p>1. Trade routes are inspectable before any wallet signature.</p>
+        <p>2. Market intelligence is sourced from open STON.fi data endpoints.</p>
+        <p>3. Users keep custody: execution only happens after explicit wallet approval.</p>
+      </div>
     </section>
   `;
 }
@@ -558,12 +608,15 @@ function renderSwapPanel(fromAsset, toAsset) {
   return `
     <section class="card space-y-3">
       <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold">Swap (Buy / Sell)</h2>
+        <h2 class="text-lg font-semibold">Responsible Swap Desk</h2>
         <div class="flex items-center gap-2">
           <button class="btn-secondary" data-action="set-buy">Buy</button>
           <button class="btn-secondary" data-action="set-sell">Sell</button>
         </div>
       </div>
+      <p class="text-xs panel-note">
+        Select a pair, inspect impact, then execute only if the route matches community standards.
+      </p>
 
       <div>
         <label class="input-label" for="swap-from">From</label>
@@ -618,12 +671,12 @@ function renderSwapPanel(fromAsset, toAsset) {
         <button class="btn-secondary" data-action="get-quote" ${
           loadingQuote ? 'disabled' : ''
         }>
-          ${loadingQuote ? 'Quoting...' : 'Get Quote'}
+          ${loadingQuote ? 'Quoting...' : 'Review Quote'}
         </button>
         <button class="btn-primary" data-action="swap" ${
           swapDisabled ? 'disabled' : ''
         }>
-          ${swapInProgress ? 'Sending...' : 'Swap'}
+          ${swapInProgress ? 'Sending...' : 'Execute Swap'}
         </button>
       </div>
     </section>
@@ -634,9 +687,9 @@ function renderQuotePanel() {
   if (!quote) {
     return `
       <section class="card">
-        <h3 class="font-semibold">Quote</h3>
+        <h3 class="font-semibold">Execution Preview</h3>
         <p class="text-sm mt-2" style="color: var(--hint)">
-          Enter pair and amount, then click "Get Quote".
+          Enter pair and amount, then click "Review Quote".
         </p>
       </section>
     `;
@@ -659,7 +712,7 @@ function renderQuotePanel() {
 
   return `
     <section class="card space-y-2">
-      <h3 class="font-semibold">Quote</h3>
+      <h3 class="font-semibold">Execution Preview</h3>
       <p class="text-sm">
         ${formatTokenAmount(Number(offerAmount), 6)} ${escapeHtml(
           offerAsset?.symbol ?? 'FROM',
@@ -691,6 +744,9 @@ function renderQuotePanel() {
           4,
         )} TON
       </p>
+      <p class="text-xs quote-check">
+        Responsibility checks: route disclosed, min received protected, wallet signature required.
+      </p>
     </section>
   `;
 }
@@ -720,7 +776,7 @@ function renderPairPoolsPanel() {
   return `
     <section class="card space-y-2">
       <div class="flex items-center justify-between">
-        <h3 class="font-semibold">Pair Liquidity Pools</h3>
+        <h3 class="font-semibold">Community Liquidity by Pair</h3>
         <button class="btn-secondary" data-action="refresh-pair-pools">Reload</button>
       </div>
       <p class="text-xs" style="color: var(--hint)">
@@ -757,7 +813,7 @@ function renderTopPoolsPanel() {
   return `
     <section class="card space-y-2">
       <div class="flex items-center justify-between">
-        <h3 class="font-semibold">Top TON Pools (Open Data)</h3>
+        <h3 class="font-semibold">Open Market Accountability Feed</h3>
         <button class="btn-secondary" data-action="refresh-top-pools">Reload</button>
       </div>
       ${

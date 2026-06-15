@@ -2,16 +2,20 @@
 
 :root {
   color-scheme: dark;
-  --bg: var(--tg-theme-bg-color, #0f1115);
-  --text: var(--tg-theme-text-color, #f5f7ff);
-  --hint: var(--tg-theme-hint-color, #8b95a7);
-  --button: var(--tg-theme-button-color, #0098ea);
+  --bg: var(--tg-theme-bg-color, #070d17);
+  --text: var(--tg-theme-text-color, #eef7ff);
+  --hint: var(--tg-theme-hint-color, #97abc4);
+  --button: var(--tg-theme-button-color, #1fa7ff);
   --button-text: var(--tg-theme-button-text-color, #ffffff);
-  --card-bg: rgba(255, 255, 255, 0.05);
-  --border: rgba(255, 255, 255, 0.12);
-  --error: #ff5c5c;
-  --success: #30d158;
-  --warning: #f5a524;
+  --card-bg: rgba(9, 18, 32, 0.82);
+  --border: rgba(150, 183, 216, 0.28);
+  --error: #ff707c;
+  --success: #53d89f;
+  --warning: #ffbf66;
+  --accent-secondary: #7dd3fc;
+  --accent-mint: #6ee7b7;
+  --hero-glow: rgba(31, 167, 255, 0.24);
+  --surface-soft: rgba(14, 29, 49, 0.72);
 }
 
 * {
@@ -21,9 +25,12 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--bg);
+  background:
+    radial-gradient(1200px 600px at 8% -10%, rgba(37, 138, 255, 0.22), transparent 60%),
+    radial-gradient(900px 520px at 92% -15%, rgba(110, 231, 183, 0.16), transparent 60%),
+    var(--bg);
   color: var(--text);
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-family: "Inter", "IBM Plex Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
 a {
@@ -50,9 +57,14 @@ button {
 
 .card {
   border: 1px solid var(--border);
-  background: var(--card-bg);
-  border-radius: 18px;
+  background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-soft) 94%, transparent),
+      var(--card-bg)
+    );
+  border-radius: 20px;
   padding: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
 }
 
 .input-label {
@@ -71,7 +83,7 @@ button {
   font-size: 14px;
   line-height: 1.4;
   color: var(--text);
-  background: transparent;
+  background: color-mix(in srgb, var(--surface-soft) 76%, transparent);
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -90,11 +102,16 @@ button {
   border: 0;
   border-radius: 14px;
   padding: 12px 16px;
-  background: var(--button);
+  background: linear-gradient(
+    120deg,
+    var(--button),
+    color-mix(in srgb, var(--accent-mint) 35%, var(--button))
+  );
   color: var(--button-text);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--button) 30%, transparent);
 }
 
 .btn-primary:disabled {
@@ -104,7 +121,7 @@ button {
 
 .btn-secondary {
   border: 1px solid var(--border);
-  background: transparent;
+  background: color-mix(in srgb, var(--surface-soft) 84%, transparent);
   border-radius: 12px;
   padding: 10px 12px;
   font-size: 13px;
@@ -125,8 +142,8 @@ button {
 }
 
 .pill.consensus {
-  background: color-mix(in srgb, var(--button) 22%, transparent);
-  color: color-mix(in srgb, var(--button) 85%, #d5eeff);
+  background: color-mix(in srgb, var(--accent-secondary) 22%, transparent);
+  color: color-mix(in srgb, var(--accent-secondary) 85%, #d5eeff);
 }
 
 .pill.executed {
@@ -220,6 +237,7 @@ button {
   border: 1px solid var(--border);
   padding: 10px 12px;
   font-size: 13px;
+  backdrop-filter: blur(6px);
 }
 
 .status-banner.info {
@@ -253,4 +271,117 @@ button {
 .dex-table th {
   color: var(--hint);
   font-weight: 600;
+}
+
+.app-shell {
+  position: relative;
+}
+
+.hero-card {
+  position: relative;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--button) 45%, var(--border));
+}
+
+.hero-card::before {
+  content: '';
+  position: absolute;
+  inset: -160px auto auto -100px;
+  width: 340px;
+  height: 340px;
+  border-radius: 999px;
+  background: radial-gradient(circle at center, var(--hero-glow), transparent 70%);
+  pointer-events: none;
+}
+
+.hero-kicker {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-secondary);
+}
+
+.hero-subtitle {
+  margin: 0;
+  color: var(--text);
+  opacity: 0.9;
+  max-width: 32ch;
+}
+
+.hero-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.value-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent-secondary) 45%, var(--border));
+  background: color-mix(in srgb, var(--surface-soft) 88%, transparent);
+  color: color-mix(in srgb, var(--accent-secondary) 68%, var(--text));
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metric-label {
+  margin: 0 0 4px;
+  font-size: 11px;
+  color: var(--hint);
+}
+
+.metric-value {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hero-footnote {
+  margin: 0;
+  color: var(--hint);
+}
+
+.mission-card {
+  border-color: color-mix(in srgb, var(--accent-mint) 30%, var(--border));
+}
+
+.mission-grid {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--text) 92%, #ffffff);
+}
+
+.mission-grid p {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-secondary) 24%, var(--border));
+  background: color-mix(in srgb, var(--surface-soft) 80%, transparent);
+}
+
+.panel-note {
+  margin: 0;
+  color: var(--hint);
+}
+
+.quote-check {
+  margin-top: 4px;
+  color: color-mix(in srgb, var(--accent-mint) 78%, var(--text));
+}
+
+@media (max-width: 520px) {
+  .hero-metrics {
+    grid-template-columns: 1fr;
+  }
 }

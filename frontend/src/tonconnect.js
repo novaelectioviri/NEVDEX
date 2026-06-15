@@ -1,6 +1,7 @@
 import {
   DEFAULT_SLIPPAGE,
   NETWORK,
+  sanitizeOptionalUrl,
   TON_ASSET_ADDRESS,
   TON_RPC_ENDPOINT,
   TONCONNECT_MANIFEST_URL,
@@ -15,8 +16,9 @@ const DEFAULT_REMOTE_WALLETS_LIST_URL =
 const TONCONNECT_STORAGE_MIGRATION_KEY = 'nevdex-tonconnect-storage-v2-cleared';
 
 function resolveManifestUrl() {
-  if (TONCONNECT_MANIFEST_URL) {
-    return TONCONNECT_MANIFEST_URL;
+  const explicitManifestUrl = sanitizeOptionalUrl(TONCONNECT_MANIFEST_URL);
+  if (explicitManifestUrl) {
+    return explicitManifestUrl;
   }
 
   const protocol = window.location.protocol;
@@ -88,35 +90,6 @@ let tonConnectUI = null;
 /** @type {Promise<any> | null} */
 let tonConnectLoadingPromise = null;
 
-/** @type {Promise<typeof import('@ton/core')> | null} */
-let tonCorePromise = null;
-
-/** @type {Promise<void> | null} */
-let bufferPolyfillPromise = null;
-
-function ensureBufferPolyfill() {
-  if (!bufferPolyfillPromise) {
-    bufferPolyfillPromise = import('buffer').then(({ Buffer }) => {
-      if (!globalThis.Buffer) {
-        globalThis.Buffer = Buffer;
-      }
-    });
-  }
-  return bufferPolyfillPromise;
-}
-
-async function loadTonCore() {
-  await ensureBufferPolyfill();
-  if (!tonCorePromise) {
-    tonCorePromise = import('@ton/core');
-  }
-  return tonCorePromise;
-}
-
-function toNanoSafe(value) {
-  return loadTonCore().then(({ toNano }) => toNano(value).toString());
-}
-
 /**
  * @returns {Promise<any>}
  */
@@ -167,19 +140,6 @@ export function onWalletChange(callback) {
   ui.onStatusChange((wallet) => {
     callback(wallet?.account?.address ?? '');
   });
-}
-
-/**
- * @param {string} value
- * @returns {Promise<import('@ton/core').Address>}
- */
-async function parseAnyAddress(value) {
-  const { Address } = await loadTonCore();
-  try {
-    return Address.parseFriendly(value).address;
-  } catch {
-    return Address.parse(value);
-  }
 }
 
 /**
