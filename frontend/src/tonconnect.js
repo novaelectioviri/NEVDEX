@@ -11,8 +11,6 @@ import { Client, dexFactory, toUnits } from '@ston-fi/sdk';
 
 const DEFAULT_REMOTE_MANIFEST_URL =
   'https://novaelectioviri.github.io/NEVDEX/tonconnect-manifest.json';
-const DEFAULT_REMOTE_WALLETS_LIST_URL =
-  'https://novaelectioviri.github.io/NEVDEX/wallets-v2.json';
 const TONCONNECT_STORAGE_MIGRATION_KEY = 'nevdex-tonconnect-storage-v2-cleared';
 
 function resolveManifestUrl() {
@@ -36,21 +34,9 @@ function resolveManifestUrl() {
 
 const manifestUrl = resolveManifestUrl();
 
-function resolveWalletsListSource() {
-  const protocol = window.location.protocol;
-  const isLocalhost =
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1';
-  const isUnsafeProtocol = protocol !== 'https:' && protocol !== 'chrome-extension:';
-
-  if (isLocalhost || isUnsafeProtocol) {
-    return DEFAULT_REMOTE_WALLETS_LIST_URL;
-  }
-
-  return new URL('./wallets-v2.json', window.location.href.split('#')[0]).toString();
-}
-
-const walletsListSource = resolveWalletsListSource();
+const customWalletsListSource = sanitizeOptionalUrl(
+  import.meta.env.VITE_TONCONNECT_WALLETS_LIST_URL ?? '',
+);
 
 function clearLegacyTonConnectStorageOnce() {
   try {
@@ -98,11 +84,16 @@ export async function getTonConnectUI() {
     clearLegacyTonConnectStorageOnce();
     if (!tonConnectLoadingPromise) {
       tonConnectLoadingPromise = import('@tonconnect/ui').then(({ TonConnect, TonConnectUI }) => {
-        const connector = new TonConnect({
+        const connectorOptions = {
           manifestUrl,
-          walletsListSource,
           analytics: { mode: 'off' },
-        });
+        };
+        // By default, TonConnect SDK uses the official multi-wallet registry
+        // with an internal fallback. Custom source stays opt-in via env.
+        if (customWalletsListSource) {
+          connectorOptions.walletsListSource = customWalletsListSource;
+        }
+        const connector = new TonConnect(connectorOptions);
         tonConnectUI = new TonConnectUI({
           connector,
           // Avoid aggressive bridge reconnect loops on page load in browsers/networks
