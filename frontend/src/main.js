@@ -495,6 +495,25 @@ function render() {
   `;
 
   bindActions();
+  void mountTonConnectButton();
+}
+
+async function mountTonConnectButton() {
+  try {
+    await ensureTonConnectReady(false);
+    if (!tonConnectUI) {
+      return;
+    }
+    const connectRoot = document.querySelector('#ton-connect-button');
+    if (connectRoot) {
+      tonConnectUI.uiOptions = {
+        buttonRootId: 'ton-connect-button',
+        uiPreferences: { theme: 'SYSTEM' },
+      };
+    }
+  } catch (error) {
+    console.error('TonConnect button mount failed', error);
+  }
 }
 
 function renderHeader() {
@@ -585,8 +604,7 @@ function renderNotice() {
 }
 
 function renderConnectControl() {
-  const label = walletAddress ? 'Wallet Connected' : 'Connect';
-  return `<button class="btn-secondary" data-action="connect-wallet">${label}</button>`;
+  return '<div class="ton-connect-host"><div id="ton-connect-button"></div></div>';
 }
 
 function renderSwapPanel(fromAsset, toAsset) {
@@ -876,16 +894,6 @@ function bindActions() {
     });
   }
 
-  document.querySelector('[data-action="connect-wallet"]')?.addEventListener('click', () => {
-    void ensureTonConnectReady(true)
-      .then(() => {
-        render();
-      })
-      .catch((error) => {
-        setNotice('error', `Wallet connection failed: ${explainError(error)}`);
-        render();
-      });
-  });
   document.querySelector('[data-action="refresh-market"]')?.addEventListener('click', () => {
     void refreshMarketData();
   });
