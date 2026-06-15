@@ -44,6 +44,8 @@ const customWalletsListSource = sanitizeOptionalUrl(
   import.meta.env.VITE_TONCONNECT_WALLETS_LIST_URL ?? '',
 );
 const walletsListSource = customWalletsListSource || DEFAULT_WALLETS_LIST_URL;
+const DISABLE_WALLET_PRELOAD =
+  String(import.meta.env.VITE_DISABLE_TONCONNECT_IMAGE_PRELOAD ?? '1') !== '0';
 
 function sanitizeWalletEntries(wallets) {
   if (!Array.isArray(wallets)) {
@@ -88,6 +90,32 @@ function patchWalletListResolver(TonConnectUI) {
   };
 
   TonConnectUI.__nevdexWalletSanitizerPatched = true;
+}
+
+function patchImagePreload() {
+  if (!DISABLE_WALLET_PRELOAD) {
+    return;
+  }
+  if (window.__nevdexImagePreloadPatched) {
+    return;
+  }
+  const NativeImage = window.Image;
+  if (typeof NativeImage !== 'function') {
+    return;
+  }
+
+  class SafeImage extends NativeImage {
+    set src(value) {
+      const normalized = String(value ?? '').trim();
+      if (!normalized || normalized === 'undefined') {
+        return;
+      }
+      super.src = normalized;
+    }
+  }
+
+  window.Image = SafeImage;
+  window.__nevdexImagePreloadPatched = true;
 }
 
 function clearLegacyTonConnectStorageOnce() {
@@ -137,6 +165,7 @@ let tonConnectLoadingPromise = null;
 export async function getTonConnectUI() {
   if (!tonConnectUI) {
     clearLegacyTonConnectStorageOnce();
+    patchImagePreload();
     if (!tonConnectLoadingPromise) {
       tonConnectLoadingPromise = import('@tonconnect/ui').then(({ TonConnect, TonConnectUI }) => {
         patchWalletListResolver(TonConnectUI);
