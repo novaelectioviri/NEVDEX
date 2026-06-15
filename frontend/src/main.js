@@ -19,7 +19,6 @@ import {
   onWalletChange,
   sendSwapTransaction,
   simulateSwap,
-  syncWalletSession,
   toUnitsString,
 } from './tonconnect.js';
 import {
@@ -308,20 +307,9 @@ async function ensureTonConnectReady(openModal) {
 
   if (openModal && tonConnectUI && !connectedAddress()) {
     await tonConnectUI.openModal();
-    // Tonkeeper can confirm in-app before the bridge event reaches the page.
-    // Retry a few times to reflect a successful connection in UI.
-    for (let attempt = 0; attempt < 6 && !connectedAddress(); attempt += 1) {
-      await new Promise((resolve) => {
-        window.setTimeout(resolve, 700);
-      });
-      walletAddress = await syncWalletSession();
-      if (walletAddress) {
-        break;
-      }
-    }
   }
 
-  walletAddress = connectedAddress() || (await syncWalletSession());
+  walletAddress = connectedAddress();
 }
 
 function validateSwapInputs() {
