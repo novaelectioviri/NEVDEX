@@ -12,7 +12,8 @@
   "dependencies": {
     "@ston-fi/api": "^0.32.0",
     "@ston-fi/sdk": "^2.7.0",
-    "@tonconnect/ui": "^2.1.0"
+    "@tonconnect/ui": "^2.1.0",
+    "buffer": "^6.0.3"
   },
   "devDependencies": {
     "vite": "^6.0.3"
