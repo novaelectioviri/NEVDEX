@@ -18,6 +18,19 @@ let tonConnectUI = null;
 /** @type {Promise<any> | null} */
 let tonConnectLoadingPromise = null;
 
+function clearTonConnectStorage() {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('ton-connect-storage_') || key?.startsWith('ton-connect-ui_')) {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch {
+    // Some browsers can block localStorage; TonConnect can still open manually.
+  }
+}
+
 function resolveManifestUrl() {
   const explicitUrl = toSafeHttpUrl(TONCONNECT_MANIFEST_URL);
   if (explicitUrl) {
@@ -40,13 +53,14 @@ export async function getTonConnectUI() {
   }
   if (!tonConnectLoadingPromise) {
     tonConnectLoadingPromise = import('@tonconnect/ui').then(({ TonConnect, TonConnectUI }) => {
+      clearTonConnectStorage();
       const connector = new TonConnect({
         manifestUrl: resolveManifestUrl(),
         analytics: { mode: 'off' },
       });
       tonConnectUI = new TonConnectUI({
         connector,
-        restoreConnection: true,
+        restoreConnection: false,
         analytics: { mode: 'off' },
         uiPreferences: { theme: 'SYSTEM' },
       });
