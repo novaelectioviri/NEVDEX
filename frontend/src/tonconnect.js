@@ -143,6 +143,21 @@ export function onWalletChange(callback) {
 }
 
 /**
+ * Tries to re-sync wallet state from bridge/storage.
+ * Useful when wallet confirms connection but status event is delayed.
+ * @returns {Promise<string>}
+ */
+export async function syncWalletSession() {
+  const ui = await getTonConnectUI();
+  try {
+    await ui.connector?.restoreConnection?.();
+  } catch {
+    // Ignore bridge restore errors; caller handles empty address.
+  }
+  return connectedAddress();
+}
+
+/**
  * @returns {StonApiClient}
  */
 export function getStonApiClient() {
