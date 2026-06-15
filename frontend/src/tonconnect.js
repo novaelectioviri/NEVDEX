@@ -17,7 +17,7 @@ const DEFAULT_WALLETS_LIST_URL = new URL(
   'wallets-v2.json',
   PAGE_BASE_URL,
 ).toString();
-const TONCONNECT_STORAGE_MIGRATION_KEY = 'nevdex-tonconnect-storage-v2-cleared';
+const TONCONNECT_STORAGE_MIGRATION_KEY = 'nevdex-tonconnect-storage-v4-cleared';
 
 function resolveManifestUrl() {
   const explicitManifestUrl = sanitizeOptionalUrl(TONCONNECT_MANIFEST_URL);
@@ -66,7 +66,10 @@ function clearLegacyTonConnectStorageOnce() {
       if (!key) {
         continue;
       }
-      if (key.startsWith('ton-connect-storage_http-bridge-gateway::')) {
+      if (
+        key.startsWith('ton-connect-storage_') ||
+        key.startsWith('ton-connect-ui_')
+      ) {
         localStorage.removeItem(key);
       }
     }
