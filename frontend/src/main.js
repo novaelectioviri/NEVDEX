@@ -49,6 +49,7 @@ let slippageTolerance = DEFAULT_SLIPPAGE;
 
 let quote = null;
 let quoteInputKey = '';
+let pairPoolRefreshTimer = null;
 
 let loadingAssets = false;
 let loadingTopPools = false;
@@ -344,6 +345,9 @@ function validateSwapInputs() {
 }
 
 async function handleQuote() {
+  if (loadingQuote) {
+    return;
+  }
   const validationError = validateSwapInputs();
   if (validationError) {
     setNotice('error', validationError);
@@ -445,7 +449,13 @@ function onSwapInputsChanged() {
   clearQuote();
   setNotice('', '');
   render();
-  void refreshPairPoolsBySelection();
+  if (pairPoolRefreshTimer) {
+    window.clearTimeout(pairPoolRefreshTimer);
+  }
+  pairPoolRefreshTimer = window.setTimeout(() => {
+    pairPoolRefreshTimer = null;
+    void refreshPairPoolsBySelection();
+  }, 220);
 }
 
 function setBuyMode() {

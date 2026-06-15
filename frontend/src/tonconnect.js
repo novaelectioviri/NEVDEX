@@ -250,9 +250,10 @@ export async function buildSwapTxParams(params) {
  */
 export async function sendSwapTransaction(message) {
   const ui = await getTonConnectUI();
+  const validUntil = Math.floor(Date.now() / 1000) + 5 * 60;
   await ui.sendTransaction({
-    validUntil: Date.now() + 5 * 60 * 1000,
-    network: NETWORK === 'testnet' ? '-3' : undefined,
+    validUntil,
+    network: NETWORK === 'testnet' ? '-3' : '-239',
     messages: [
       {
         address: message.address,
