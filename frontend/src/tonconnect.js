@@ -11,6 +11,10 @@ import { Client, dexFactory, toUnits } from '@ston-fi/sdk';
 
 const DEFAULT_REMOTE_MANIFEST_URL =
   'https://novaelectioviri.github.io/NEVDEX/tonconnect-manifest.json';
+const DEFAULT_LOCAL_MANIFEST_URL = `${window.location.origin}${window.location.pathname.replace(
+  /\/[^/]*$/,
+  '/',
+)}tonconnect-manifest.json`;
 const DEFAULT_WALLETS_LIST_URL = new URL(
   './wallets-v2.json',
   window.location.href.split('#')[0],
@@ -33,7 +37,7 @@ function resolveManifestUrl() {
     return DEFAULT_REMOTE_MANIFEST_URL;
   }
 
-  return new URL('./tonconnect-manifest.json', window.location.href.split('#')[0]).toString();
+  return DEFAULT_LOCAL_MANIFEST_URL;
 }
 
 const manifestUrl = resolveManifestUrl();

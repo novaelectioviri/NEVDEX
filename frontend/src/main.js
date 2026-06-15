@@ -480,6 +480,13 @@ function render() {
   const fromAsset = getFromAsset();
   const toAsset = getToAsset();
 
+  if (tonConnectUI && tonConnectReady) {
+    tonConnectUI.uiOptions = {
+      buttonRootId: 'ton-connect-button',
+      uiPreferences: { theme: 'SYSTEM' },
+    };
+  }
+
   app.innerHTML = `
     <div class="app-shell safe-top safe-bottom min-h-screen">
       <main class="max-w-md mx-auto w-full px-4 py-2 space-y-4">
@@ -495,16 +502,6 @@ function render() {
   `;
 
   bindActions();
-
-  if (tonConnectUI && tonConnectReady) {
-    const connectRoot = document.querySelector('#ton-connect-button');
-    if (connectRoot) {
-      tonConnectUI.uiOptions = {
-        buttonRootId: 'ton-connect-button',
-        uiPreferences: { theme: 'SYSTEM' },
-      };
-    }
-  }
 }
 
 function renderHeader() {
